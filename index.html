@@ -73,32 +73,11 @@ body::after {
   pointer-events: none; z-index: 0;
 }
 
-/* PREVIEW BANNER */
-.preview-banner {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  background: var(--ink); color: var(--paper);
-  padding: 8px 16px; font-size: 10px; letter-spacing: 0.2em;
-  text-transform: uppercase; text-align: center;
-  display: flex; justify-content: center; align-items: center; gap: 14px;
-  flex-wrap: wrap;
-  font-family: var(--body);
-}
-.preview-banner span { opacity: 0.55; }
-.preview-banner button {
-  background: transparent; border: 1px solid rgba(241, 230, 210, 0.25);
-  color: var(--paper); padding: 4px 12px; cursor: pointer;
-  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-  font-family: var(--body); border-radius: 0;
-  transition: all 0.2s;
-}
-.preview-banner button.active { background: var(--gold-light); color: var(--ink); border-color: var(--gold-light); }
-.preview-banner button:hover { border-color: var(--gold-light); }
-
 /* APP CONTAINER */
 #app {
   max-width: 720px;
   margin: 0 auto;
-  padding: 80px 28px 60px;
+  padding: 40px 28px 60px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -180,19 +159,44 @@ html.zh h1, html.zh h2 {
   flex-shrink: 0;
 }
 
-/* WELCOME SCREEN — invitation-style */
+/* WELCOME SCREEN — invitation-style with photo background */
 .welcome {
   text-align: center; margin: auto 0;
   padding: 24px 0 40px;
+  /* Full-bleed photo background */
+  background: url('bg.jpg') center 30% / cover no-repeat;
+  margin: -80px -28px -60px;
+  padding: 104px 52px 100px;
+  position: relative;
+}
+.welcome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(241, 230, 210, 0.35) 0%,
+    rgba(241, 230, 210, 0.6) 25%,
+    rgba(241, 230, 210, 0.7) 50%,
+    rgba(241, 230, 210, 0.6) 75%,
+    rgba(241, 230, 210, 0.35) 100%
+  );
+  z-index: 0;
+}
+@media (max-width: 640px) {
+  .welcome { margin: -70px -18px -50px; padding: 94px 18px 90px; }
 }
 .welcome-frame {
-  background: var(--card);
+  background: rgba(251, 245, 231, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   padding: clamp(40px, 7vw, 64px) clamp(24px, 5vw, 48px);
   position: relative;
+  z-index: 1;
   box-shadow:
     0 1px 0 rgba(255,255,255,0.5) inset,
-    0 30px 60px -30px rgba(94, 70, 36, 0.2),
+    0 30px 60px -30px rgba(94, 70, 36, 0.25),
     0 1px 3px rgba(94, 70, 36, 0.08);
 }
 .welcome-frame::before, .welcome-frame::after {
@@ -491,7 +495,7 @@ html.zh .couple-signature {
 .mt-md { margin-top: 24px; }
 
 @media (max-width: 640px) {
-  #app { padding: 70px 18px 50px; }
+  #app { padding: 30px 18px 50px; }
   .welcome-frame { padding: 36px 22px; }
   .person-card { padding: 20px; }
   .nav { flex-direction: column-reverse; gap: 14px; align-items: stretch; }
@@ -526,11 +530,15 @@ const T = {
     back: 'Back',
     submit: 'Submit RSVP',
     edit: 'Edit',
-    name_title: 'Let\'s start with names',
-    name_subtitle_solo: 'Tell us who you are.',
-    name_subtitle_plus1: 'Tell us who\'s coming — please fill in details for both of you.',
+    mode_title: 'How many seats should we save?',
+    mode_subtitle: 'Let us know if you\'re coming solo or bringing someone special.',
+    mode_solo: 'Just me',
+    mode_plus1: 'Me and my plus one',
+    name_title: 'We\'d love to know who\'s coming',
+    name_subtitle_solo: 'So we can make everything just right for you.',
+    name_subtitle_plus1: 'A few details for the two of you, so we can make it personal.',
     invitee_label: 'You',
-    plusone_label: 'Your guest',
+    plusone_label: 'Your Plus One',
     first_name: 'First name',
     last_name: 'Last name',
     relationship_title: 'How do you know us?',
@@ -609,11 +617,15 @@ const T = {
     back: '返回',
     submit: '提交回覆',
     edit: '修改',
-    name_title: '請填寫您的姓名',
-    name_subtitle_solo: '請告訴我們您的姓名。',
-    name_subtitle_plus1: '請填寫您和您的同行嘉賓的資料。',
+    mode_title: '請問需要預留多少個座位？',
+    mode_subtitle: '請問您會獨自出席，還是攜伴同行？',
+    mode_solo: '只有我一位',
+    mode_plus1: '我和我的同行嘉賓',
+    name_title: '期待認識您',
+    name_subtitle_solo: '讓我們可以為您準備最貼心的安排。',
+    name_subtitle_plus1: '請填寫二位的資料，讓我們為你們準備最貼心的安排。',
     invitee_label: '您',
-    plusone_label: '您的同行嘉賓',
+    plusone_label: '同行嘉賓',
     first_name: 'First Name',
     last_name: 'Last Name',
     relationship_title: '您與我們的關係',
@@ -686,38 +698,22 @@ const T = {
 // ============================================================
 let state = {
   lang: null,
-  mode: 'solo', // 'solo' or 'plus1'
+  mode: null, // null until chosen, then 'solo' or 'plus1'
   step: 'welcome',
   invitee: { firstName: '', lastName: '', relationship: '', attendance: '', meal: '', afterparty: '' },
   plusone: { firstName: '', lastName: '', relationship: '', attendance: '', meal: '', afterparty: '' },
   shared: { dietary: '', message: '', photoName: '', photoData: '' }
 };
 
-// Read URL param for mode (in production: ?type=solo or ?type=plus1)
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('type') === 'plus1') state.mode = 'plus1';
-
-const STEPS = ['welcome', 'name', 'relationship', 'attendance', 'meal', 'dietary', 'afterparty', 'message', 'photo', 'review', 'thankyou'];
+const STEPS = ['welcome', 'mode', 'name', 'relationship', 'attendance', 'meal', 'dietary', 'afterparty', 'message', 'photo', 'review', 'thankyou'];
 
 function t(key) { return T[state.lang || 'en'][key]; }
 
 // ============================================================
-// MODE TOGGLE (Preview only)
+// MODE SELECTION (solo vs plus-one)
 // ============================================================
-function setMode(mode) {
+function selectMode(mode) {
   state.mode = mode;
-  document.getElementById('mode-solo').classList.toggle('active', mode === 'solo');
-  document.getElementById('mode-plus1').classList.toggle('active', mode === 'plus1');
-  resetFlow();
-}
-
-function resetFlow() {
-  state.lang = null;
-  state.step = 'welcome';
-  state.invitee = { firstName: '', lastName: '', relationship: '', attendance: '', meal: '', afterparty: '' };
-  state.plusone = { firstName: '', lastName: '', relationship: '', attendance: '', meal: '', afterparty: '' };
-  state.shared = { dietary: '', message: '', photoName: '', photoData: '' };
-  document.documentElement.classList.remove('zh');
   render();
 }
 
@@ -770,7 +766,7 @@ function jumpTo(step) {
 // PROGRESS BAR
 // ============================================================
 function renderProgress() {
-  if (state.step === 'welcome' || state.step === 'thankyou') return '';
+  if (state.step === 'welcome' || state.step === 'mode' || state.step === 'thankyou') return '';
   const visibleSteps = ['name', 'relationship', 'attendance', 'meal', 'dietary', 'afterparty', 'message', 'photo', 'review'];
   const currentIdx = visibleSteps.indexOf(state.step);
   if (currentIdx === -1) return '';
@@ -822,8 +818,36 @@ function renderWelcome() {
 function chooseLang(lang) {
   state.lang = lang;
   document.documentElement.classList.toggle('zh', lang === 'zh');
-  state.step = 'name';
+  state.step = 'mode';
   render();
+}
+
+function renderMode() {
+  return `
+    <div class="screen">
+      <div class="eyebrow">${t('welcome_couple')} ${t('welcome_and')} ${t('welcome_couple2')}</div>
+      <h2>${t('mode_title')}</h2>
+      <p class="subtitle">${t('mode_subtitle')}</p>
+      <div class="person-cards">
+        <div class="person-card">
+          <div class="choices">
+            <label class="choice ${state.mode === 'solo' ? 'selected' : ''}">
+              <input type="radio" name="mode" ${state.mode === 'solo' ? 'checked' : ''} onchange="selectMode('solo')" />
+              <span>${t('mode_solo')}</span>
+            </label>
+            <label class="choice ${state.mode === 'plus1' ? 'selected' : ''}">
+              <input type="radio" name="mode" ${state.mode === 'plus1' ? 'checked' : ''} onchange="selectMode('plus1')" />
+              <span>${t('mode_plus1')}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn-text" onclick="back()">← ${t('back')}</button>
+        <button class="btn btn-primary" onclick="next()" ${state.mode ? '' : 'disabled'}>${t('next')} →</button>
+      </div>
+    </div>
+  `;
 }
 
 function renderName() {
@@ -1317,6 +1341,7 @@ function render() {
   let content = '';
   switch (state.step) {
     case 'welcome': content = renderWelcome(); break;
+    case 'mode': content = renderMode(); break;
     case 'name': content = renderName(); break;
     case 'relationship': content = renderRelationship(); break;
     case 'attendance': content = renderAttendance(); break;
